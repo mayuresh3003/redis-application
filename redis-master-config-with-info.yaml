@@ -1,0 +1,116 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-master-config
+  namespace: redis
+data:
+  redis.conf: |
+    ########################################
+    # Network settings
+    ########################################
+
+    bind 0.0.0.0                 # Listen on all network interfaces
+    port 6381                   # Use port 6381 instead of default 6379
+    protected-mode no           # Disable protected mode (allows remote connections)
+
+    ########################################
+    # Persistence settings (AOF + RDB)
+    ########################################
+
+    dir /data                   # Directory for storing RDB/AOF persistence files
+
+    appendonly yes              # Enable Append-Only File (AOF) for persistence
+    appendfilename "appendonly.aof"   # Name of AOF file
+
+    appendfsync everysec        # Fsync AOF to disk every second (recommended)
+    no-appendfsync-on-rewrite no # Fsync even during AOF rewrite (safer, more I/O)
+
+    auto-aof-rewrite-percentage 100  # Rewrite AOF when file grows 2x
+    auto-aof-rewrite-min-size 64mb   # Minimum size before rewrite happens
+
+    aof-load-truncated yes      # Load truncated AOF even if corrupted at end
+    aof-use-rdb-preamble yes    # AOF starts with RDB snapshot for faster restart
+
+    # RDB snapshot settings
+    dbfilename "dump.rdb"       # Name of the RDB file
+
+    save 900 1                  # If 1 key changed in 15 min → create RDB snapshot
+    save 300 10                 # If 10 keys changed in 5 min → create snapshot
+    save 60 10000               # If 10k keys changed in 1 min → snapshot
+
+    stop-writes-on-bgsave-error yes  # Stop writes if RDB saving fails
+    rdbcompression yes          # Compress RDB file with LZF
+    rdbchecksum yes             # Add checksum to RDB file for safety
+    rdb-del-sync-files no       # Do not delete RDB temp files on fsync error
+
+    ########################################
+    # Replication settings
+    ########################################
+
+    replica-serve-stale-data yes     # Replica serves stale data if disconnected
+    replica-read-only yes            # Replica is read-only
+    replica-priority 100             # Lower number = higher failover priority
+
+    repl-diskless-sync no            # Use disk-based replication sync
+    repl-diskless-sync-delay 5       # Delay if diskless sync is enabled
+    repl-diskless-load disabled      # Disable diskless loading of replica
+
+    repl-disable-tcp-nodelay no      # Faster propagation using TCP_NODELAY
+
+    replica-lazy-flush no            # Do not lazy flush when syncing replication
+
+    ########################################
+    # Logging and debugging
+    ########################################
+
+    loglevel notice                  # Logging level: notice (recommended)
+    logfile "/var/log/redis/redis-server.log"  # Redis log file path
+    pidfile "/var/run/redis/redis-server.pid"  # PID file path
+
+    slowlog-log-slower-than 10000    # Log queries >10 ms
+    slowlog-max-len 128              # Store last 128 slowlog entries
+    latency-monitor-threshold 0      # Disable latency monitor
+
+    ########################################
+    # Memory and CPU
+    ########################################
+
+    databases 16                     # Number of logical Redis databases (0–15)
+    hz 50                            # Event loop frequency
+    dynamic-hz yes                   # Auto-adjust hz for performance
+
+    # Output buffer limits
+    client-output-buffer-limit normal 0 0 0     # No limit for normal clients
+    client-output-buffer-limit replica 256mb 64mb 60  # Limits for replicas
+    client-output-buffer-limit pubsub 32mb 8mb 60     # Limits for Pub/Sub clients
+
+    # Lazy freeing (background deletes)
+    lazyfree-lazy-eviction yes       # Asynchronous eviction
+    lazyfree-lazy-expire yes         # Async expiry
+    lazyfree-lazy-server-del yes     # Async server-side delete
+    lazyfree-lazy-user-del yes       # Async DEL commands
+
+    ########################################
+    # Performance optimization
+    ########################################
+
+    jemalloc-bg-thread yes           # Enable allocator background thread
+    activerehashing yes              # Active rehashing for better memory use
+    rdb-save-incremental-fsync yes   # Incremental fsync for RDB saving
+    aof-rewrite-incremental-fsync yes # Incremental fsync for rewriting AOF
+
+    ########################################
+    # Security and access control
+    ########################################
+
+    user default on nopass ~* +@all  # Default user, no password, full access
+                                     # ⚠️ Not secure—consider adding password
+
+    ########################################
+    # Miscellaneous
+    ########################################
+
+    always-show-logo no              # Hide Redis startup logo
+    timeout 0                        # Never close idle client connections
+    daemonize no                     # Do not run as a background process
+    supervised no                    # No external supervisor (systemd/etc.)
